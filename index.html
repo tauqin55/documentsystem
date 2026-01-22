@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文本转大写工具</title>
+  <style>
+    /* 极简样式：仅保留基本布局 */
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    input {
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .result {
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-height: 50px;
+      background-color: #f9f9f9;
+    }
+    .error {
+      color: red;
+      margin-top: 10px;
+    }
+    .divider {
+      border-top: 1px solid #ddd;
+      margin: 30px 0;
+    }
+    .file-input-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    input[type="file"] {
+      padding: 5px;
+    }
+    .file-info {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>文本转大写工具</h1>
+    
+    <!-- 输入框：用于输入要转换的文本 -->
+    <input 
+      type="text" 
+      id="textInput" 
+      placeholder="请输入要转换的文本..."
+    />
+    
+    <!-- 按钮：触发转换操作 -->
+    <button id="convertBtn" onclick="convertToUppercase()">
+      转换为大写
+    </button>
+    
+    <!-- 结果展示区域 -->
+    <div class="result" id="resultArea">
+      转换结果将显示在这里...
+    </div>
+    
+    <!-- 错误信息展示区域 -->
+    <div class="error" id="errorArea"></div>
+
+    <!-- 分隔线 -->
+    <div class="divider"></div>
+
+    <!-- 文件上传区域 -->
+    <h2>文件上传转换</h2>
+    
+    <!-- 文件选择区域 -->
+    <div class="file-input-wrapper">
+      <input 
+        type="file" 
+        id="fileInput" 
+        accept=".txt,.html,.css,.js,.json,.csv,.xml,.md,text/*"
+      />
+      <div class="file-info" id="fileInfo">未选择文件</div>
+    </div>
+    
+    <!-- 文件上传按钮 -->
+    <button id="uploadBtn" onclick="uploadAndConvertFile()">
+      上传并转换为大写
+    </button>
+    
+    <!-- 文件转换结果展示区域 -->
+    <div class="result" id="fileResultArea">
+      文件转换结果将显示在这里...
+    </div>
+    
+    <!-- 文件错误信息展示区域 -->
+    <div class="error" id="fileErrorArea"></div>
+  </div>
+
+  <script>
+    /**
+     * 将文本转换为大写的函数
+     * 调用后端 API 接口，将输入的文本转换为大写
+     */
+    async function convertToUppercase() {
+      // 获取输入框元素
+      const textInput = document.getElementById('textInput');
+      // 获取结果展示区域
+      const resultArea = document.getElementById('resultArea');
+      // 获取错误信息展示区域
+      const errorArea = document.getElementById('errorArea');
+      // 获取按钮元素
+      const convertBtn = document.getElementById('convertBtn');
+
+      // 获取用户输入的文本
+      const inputText = textInput.value.trim();
+
+      // 输入验证：检查是否输入了文本
+      if (!inputText) {
+        errorArea.textContent = '请输入要转换的文本！';
+        resultArea.textContent = '转换结果将显示在这里...';
+        return;
+      }
+
+      // 清空之前的错误信息
+      errorArea.textContent = '';
+      // 显示加载状态
+      resultArea.textContent = '正在转换...';
+      // 禁用按钮，防止重复提交
+      convertBtn.disabled = true;
+
+      try {
+        // 调用后端 API 接口
+        const response = await fetch('http://localhost:3000/api/uppercase', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            text: inputText
+          })
+        });
+
+        // 解析响应数据
+        const data = await response.json();
+
+        // 检查响应状态
+        if (response.ok && data.success) {
+          // 成功：显示转换结果
+          resultArea.textContent = data.result;
+          errorArea.textContent = '';
+        } else {
+          // 失败：显示错误信息
+          errorArea.textContent = data.error || '转换失败，请重试';
+          resultArea.textContent = '转换结果将显示在这里...';
+        }
+      } catch (error) {
+        // 异常处理：网络错误或其他异常
+        console.error('请求失败：', error);
+        errorArea.textContent = '网络错误：无法连接到服务器，请确保后端服务已启动';
+        resultArea.textContent = '转换结果将显示在这里...';
+      } finally {
+        // 恢复按钮状态
+        convertBtn.disabled = false;
+      }
+    }
+
+    // 监听回车键，方便用户操作
+    document.getElementById('textInput').addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        convertToUppercase();
+      }
+    });
+
+    /**
+     * 监听文件选择，显示文件信息
+     */
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+      const fileInput = event.target;
+      const fileInfo = document.getElementById('fileInfo');
+      const fileErrorArea = document.getElementById('fileErrorArea');
+      
+      // 清空错误信息
+      fileErrorArea.textContent = '';
+      
+      if (fileInput.files && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        // 显示文件信息：文件名和大小
+        const fileSize = (file.size / 1024).toFixed(2); // 转换为 KB
+        fileInfo.textContent = `已选择：${file.name} (${fileSize} KB)`;
+      } else {
+        fileInfo.textContent = '未选择文件';
+      }
+    });
+
+    /**
+     * 上传文件并转换为大写的函数
+     * 调用后端 API 接口，上传文件并将内容转换为大写
+     */
+    async function uploadAndConvertFile() {
+      // 获取文件输入元素
+      const fileInput = document.getElementById('fileInput');
+      // 获取文件结果展示区域
+      const fileResultArea = document.getElementById('fileResultArea');
+      // 获取文件错误信息展示区域
+      const fileErrorArea = document.getElementById('fileErrorArea');
+      // 获取上传按钮元素
+      const uploadBtn = document.getElementById('uploadBtn');
+      // 获取文件信息显示区域
+      const fileInfo = document.getElementById('fileInfo');
+
+      // 检查是否选择了文件
+      if (!fileInput.files || fileInput.files.length === 0) {
+        fileErrorArea.textContent = '请先选择要上传的文件！';
+        fileResultArea.textContent = '文件转换结果将显示在这里...';
+        return;
+      }
+
+      // 获取选中的文件
+      const file = fileInput.files[0];
+
+      // 文件大小验证：限制为 10MB
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        fileErrorArea.textContent = '文件大小超过限制（最大 10MB）！';
+        fileResultArea.textContent = '文件转换结果将显示在这里...';
+        return;
+      }
+
+      // 清空之前的错误信息
+      fileErrorArea.textContent = '';
+      // 显示加载状态
+      fileResultArea.textContent = '正在上传并转换文件...';
+      // 禁用按钮，防止重复提交
+      uploadBtn.disabled = true;
+
+      try {
+        // 创建 FormData 对象，用于文件上传
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // 调用后端 API 接口
+        const response = await fetch('http://localhost:3000/api/uppercase-file', {
+          method: 'POST',
+          body: formData
+          // 注意：使用 FormData 时，不要设置 Content-Type 头
+          // 浏览器会自动设置正确的 multipart/form-data 和 boundary
+        });
+
+        // 解析响应数据
+        const data = await response.json();
+
+        // 检查响应状态
+        if (response.ok && data.success) {
+          // 成功：显示转换结果
+          fileResultArea.textContent = data.result;
+          fileInfo.textContent = `已转换：${data.fileName} (原长度: ${data.originalLength}, 转换后: ${data.convertedLength})`;
+          fileErrorArea.textContent = '';
+        } else {
+          // 失败：显示错误信息
+          fileErrorArea.textContent = data.error || '文件转换失败，请重试';
+          fileResultArea.textContent = '文件转换结果将显示在这里...';
+        }
+      } catch (error) {
+        // 异常处理：网络错误或其他异常
+        console.error('文件上传失败：', error);
+        fileErrorArea.textContent = '网络错误：无法连接到服务器，请确保后端服务已启动';
+        fileResultArea.textContent = '文件转换结果将显示在这里...';
+      } finally {
+        // 恢复按钮状态
+        uploadBtn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
